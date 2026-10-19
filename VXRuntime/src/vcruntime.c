@@ -272,6 +272,21 @@ static WINAPI int CxxFrameHandler4(EXCEPTION_RECORD *rec, uint64_t frame, void *
     return ExceptionContinueSearch;
 }
 
+// "type: what()" of a thrown object, from the exception's parameters (magic, object, ThrowInfo, image base).
+// The first catchable type is the thrown one; a std::exception keeps its message after the vftable.
+void vx_cxx_describe(const uint64_t *info, char *out, size_t size) {
+    const throw_info *ti = (const throw_info *)info[2];
+    uint64_t base = info[3];
+    if (!ti) { snprintf(out, size, "(rethrow)"); return; }
+    const catchable_array *ca = AT(base, ti->catchable_array);
+    const char *name = ((const type_descriptor *)AT(base, ((const catchable_type *)AT(base, ca->types[0]))->type))->name;
+    const char *what = NULL;
+    for (int i = 0; i < ca->count; i++)
+        if (!strcmp(((const type_descriptor *)AT(base, ((const catchable_type *)AT(base, ca->types[i]))->type))->name,
+                    ".?AVexception@std@@")) what = *(const char **)((char *)info[1] + 8);
+    snprintf(out, size, "%s%s%s", name, what ? ": " : "", what ? what : "");
+}
+
 // ---- throwing ------------------------------------------------------------------------------------------------------------------
 void vx_raise(DWORD code, DWORD flags, DWORD n, const uint64_t *args, void *ctx) __attribute__((noreturn));
 // Called by _CxxThrowException (context.S) with the thrower's context. Without an object it rethrows the
@@ -285,6 +300,7 @@ void __attribute__((noreturn)) vx_cxx_throw(void *obj, const throw_info *ti, voi
         args[1] = (uint64_t)h->object; args[2] = (uint64_t)h->info; args[3] = h->info_base;
     } else {
         pc_to_header((uint64_t)ti, &args[3]);
+        if (vx_trace) { char d[256]; vx_cxx_describe(args, d, sizeof d); vx_log("C++ throw %s", d); }
     }
     vx_raise(CXX_EXCEPTION, EXCEPTION_NONCONTINUABLE, 4, args, ctx);
 }

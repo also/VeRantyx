@@ -342,6 +342,19 @@ static WINAPI HANDLE CreateThread(void *sa, size_t stack, DWORD (WINAPI *start)(
     if (tid) *tid = t->tid;
     return h;
 }
+int vx_process_info(HANDLE h, DWORD *code);
+// Threads in another process cannot be made here; in this one, the attribute list (processor group, ideal
+// processor: MSVC's Concurrency Runtime starts its workers this way) has nothing to say on one group.
+static WINAPI HANDLE CreateRemoteThreadEx(HANDLE process, void *sa, size_t stack, DWORD (WINAPI *start)(void *), void *arg,
+                                          DWORD flags, void *attributes, DWORD *tid) {
+    (void)attributes;
+    if ((intptr_t)process != -1 && vx_process_info(process, NULL) != getpid()) { vx_set_last_error(5 /* ERROR_ACCESS_DENIED */); return NULL; }
+    return CreateThread(sa, stack, start, arg, flags, tid);
+}
+static WINAPI HANDLE CreateRemoteThread(HANDLE process, void *sa, size_t stack, DWORD (WINAPI *start)(void *), void *arg,
+                                        DWORD flags, DWORD *tid) {
+    return CreateRemoteThreadEx(process, sa, stack, start, arg, flags, NULL, tid);
+}
 
 static WINAPI void ExitThread(DWORD code) {
     if (t_exit_jump) { t_exit_code = code; longjmp(*t_exit_jump, 1); }
@@ -1716,7 +1729,8 @@ static WINAPI BOOL InitOnceExecuteOnce(uint64_t *once, init_once_fn fn, void *pa
 }
 
 static const vx_export sync_k32[] = {
-    VX_EXPORT(CreateThread), VX_EXPORT(ExitThread), VX_EXPORT(GetExitCodeThread), VX_EXPORT(GetThreadId),
+    VX_EXPORT(CreateThread), VX_EXPORT(CreateRemoteThread), VX_EXPORT(CreateRemoteThreadEx),
+    VX_EXPORT(ExitThread), VX_EXPORT(GetExitCodeThread), VX_EXPORT(GetThreadId),
     VX_EXPORT(ResumeThread), VX_EXPORT(SuspendThread), VX_EXPORT(GetThreadContext), VX_EXPORT(SetThreadContext),
     VX_EXPORT(GetThreadPriority), VX_EXPORT(SetThreadPriority), VX_EXPORT(SetThreadDescription), VX_EXPORT(SwitchToThread),
     VX_EXPORT(GetProcessAffinityMask), VX_EXPORT(SetProcessAffinityMask), VX_EXPORT(SetThreadAffinityMask), VX_EXPORT(OpenProcess),

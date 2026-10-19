@@ -89,6 +89,21 @@ static WINAPI BOOL GetThreadGroupAffinity(HANDLE t, uint8_t *a) {
     *(uint64_t *)a = n >= 64 ? ~0ull : (1ull << n) - 1;
     return 1;
 }
+// One group, one NUMA node: PROCESSOR_NUMBER is group, number, reserved; GROUP_AFFINITY is mask, group, 3 reserved.
+// MSVC's Concurrency Runtime asks for these on Windows 7 and later and throws scheduler_resource_allocation_error
+// when they are missing.
+static WINAPI void GetCurrentProcessorNumberEx(uint8_t *pn) { memset(pn, 0, 4); }
+static WINAPI BOOL GetNumaNodeProcessorMaskEx(uint16_t node, uint8_t *a) {
+    if (node != 0) { vx_set_last_error(87); return 0; }
+    GetThreadGroupAffinity(NULL, a);
+    return 1;
+}
+static WINAPI BOOL GetNumaNodeProcessorMask(uint8_t node, uint64_t *mask) {
+    if (node != 0) { vx_set_last_error(87); return 0; }
+    int n = cpu_count();
+    *mask = n >= 64 ? ~0ull : (1ull << n) - 1;
+    return 1;
+}
 static WINAPI void FlushProcessWriteBuffers(void) { __atomic_thread_fence(__ATOMIC_SEQ_CST); }
 
 // ---- the thread pool: workers are Windows threads; timers and waits run their callbacks on them too ---------------
@@ -635,6 +650,7 @@ static const vx_export k32[] = {
     VX_EXPORT(GetMaximumProcessorCount), VX_EXPORT(GetActiveProcessorGroupCount), VX_EXPORT(GetMaximumProcessorGroupCount),
     VX_EXPORT(SetThreadIdealProcessor), VX_EXPORT(SetThreadIdealProcessorEx), VX_EXPORT(GetThreadIdealProcessorEx),
     VX_EXPORT(SetThreadGroupAffinity), VX_EXPORT(GetThreadGroupAffinity), VX_EXPORT(FlushProcessWriteBuffers),
+    VX_EXPORT(GetCurrentProcessorNumberEx), VX_EXPORT(GetNumaNodeProcessorMaskEx), VX_EXPORT(GetNumaNodeProcessorMask),
     VX_EXPORT(CreateThreadpoolWork), VX_EXPORT(SubmitThreadpoolWork), VX_EXPORT(WaitForThreadpoolWorkCallbacks),
     VX_EXPORT(CloseThreadpoolWork), VX_EXPORT(TrySubmitThreadpoolCallback), VX_EXPORT(CreateThreadpoolTimer),
     VX_EXPORT(SetThreadpoolTimer), VX_EXPORT(IsThreadpoolTimerSet), VX_EXPORT(WaitForThreadpoolTimerCallbacks),

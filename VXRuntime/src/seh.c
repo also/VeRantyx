@@ -377,6 +377,27 @@ static void __attribute__((noreturn)) resume(CONTEXT *ctx) {
     vx_restore_context(ctx);
 }
 
+void vx_cxx_describe(const uint64_t *info, char *out, size_t size);
+static void log_unhandled(const EXCEPTION_RECORD *rec, const CONTEXT *ctx, vx_entry *at) {
+    vx_log("unhandled exception %#x at %p", rec->code, rec->address);
+    if (rec->code == 0xe06d7363 && rec->nparams >= 4 && rec->info[0] == 0x19930520) {
+        char d[256];
+        vx_cxx_describe(rec->info, d, sizeof d);
+        vx_log("   C++ exception %s", d);
+    }
+    CONTEXT walk = *ctx;                          // the program's frames, unwound
+    for (int depth = 0; depth < 20; depth++) {
+        const vx_image *m = vx_image_at(walk.rip);
+        vx_log("   #%d %s+%#llx", depth, m ? m->name : "?", m ? (unsigned long long)(walk.rip - (uint64_t)(uintptr_t)m->base) : (unsigned long long)walk.rip);
+        uint64_t base;
+        RUNTIME_FUNCTION *fn = next_function(&walk, &at, 0, &base);
+        if (!fn) break;
+        void *data = NULL; uint64_t frame = 0;
+        RtlVirtualUnwind(0, base, walk.rip, fn, &walk, &data, &frame, NULL);
+        if (!walk.rip) break;
+    }
+}
+
 static void __attribute__((noreturn)) dispatch(EXCEPTION_RECORD *rec, CONTEXT *ctx) {
     vx_entry self = ENTRY(t_entries, ctx);
     ENTRY_SET_AT(self);
@@ -400,20 +421,12 @@ static void __attribute__((noreturn)) dispatch(EXCEPTION_RECORD *rec, CONTEXT *c
             resume(ctx);
         }
     }
-    if (g_unhandled_filter && g_unhandled_filter(&ep) == -1) resume(ctx);
-    vx_log("unhandled exception %#x at %p", rec->code, rec->address);
-    CONTEXT walk = *ctx;                          // the program's frames, unwound
-    vx_entry *at = self.next;
-    for (int depth = 0; depth < 20; depth++) {
-        const vx_image *m = vx_image_at(walk.rip);
-        vx_log("   #%d %s+%#llx", depth, m ? m->name : "?", m ? (unsigned long long)(walk.rip - (uint64_t)(uintptr_t)m->base) : (unsigned long long)walk.rip);
-        uint64_t base;
-        RUNTIME_FUNCTION *fn = next_function(&walk, &at, 0, &base);
-        if (!fn) break;
-        void *data = NULL; uint64_t frame = 0;
-        RtlVirtualUnwind(0, base, walk.rip, fn, &walk, &data, &frame, NULL);
-        if (!walk.rip) break;
+    // The program's filter often ends the process itself (MSVC's calls terminate()): say what reached it first.
+    if (g_unhandled_filter) {
+        if (vx_trace) log_unhandled(rec, ctx, self.next);
+        if (g_unhandled_filter(&ep) == -1) resume(ctx);
     }
+    if (!g_unhandled_filter || !vx_trace) log_unhandled(rec, ctx, self.next);
     fflush(stdout);
     _exit((int)rec->code);
 }

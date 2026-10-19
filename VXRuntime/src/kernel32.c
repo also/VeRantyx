@@ -1034,10 +1034,23 @@ static WINAPI DWORD EventWriteTransfer(uint64_t h, const void *d, const void *a,
     (void)h; (void)d; (void)a; (void)r; (void)n; (void)data; return 0;
 }
 static WINAPI BOOL EventEnabled(uint64_t h, const void *d) { (void)h; (void)d; return 0; }
+// Classic (MOF) event tracing: registration succeeds and no session ever enables it, so the control callback is
+// never called. MSVC's Concurrency Runtime registers this way (and calls through a NULL pointer if it cannot).
+static WINAPI DWORD RegisterTraceGuidsW(void *cb, void *ctx, const void *guid, DWORD n, void *regs, const WCHAR *mof,
+                                        const WCHAR *res, uint64_t *h) {
+    (void)cb; (void)ctx; (void)guid; (void)n; (void)regs; (void)mof; (void)res; *h = 1; return 0;
+}
+static WINAPI DWORD UnregisterTraceGuids(uint64_t h) { (void)h; return 0; }
+static WINAPI DWORD TraceEvent(uint64_t session, void *event) { (void)session; (void)event; return 6 /* ERROR_INVALID_HANDLE */; }
+static WINAPI uint64_t GetTraceLoggerHandle(void *buffer) { (void)buffer; vx_set_last_error(6); return ~0ull; }
+static WINAPI uint8_t GetTraceEnableLevel(uint64_t session) { (void)session; return 0; }
+static WINAPI DWORD GetTraceEnableFlags(uint64_t session) { (void)session; return 0; }
 static const vx_export advapi_misc[] = {
     VX_EXPORT(InitializeSecurityDescriptor), VX_EXPORT(SetSecurityDescriptorDacl), VX_EXPORT(AllocateAndInitializeSid),
     VX_EXPORT(FreeSid), VX_EXPORT(CheckTokenMembership), VX_EXPORT(EventRegister), VX_EXPORT(EventUnregister),
     VX_EXPORT(EventWrite), VX_EXPORT(EventWriteTransfer), VX_EXPORT(EventEnabled), VX_EXPORT(GetUserNameA), VX_EXPORT(GetUserNameW),
+    VX_EXPORT(RegisterTraceGuidsW), VX_EXPORT(UnregisterTraceGuids), VX_EXPORT(TraceEvent), VX_EXPORT(GetTraceLoggerHandle),
+    VX_EXPORT(GetTraceEnableLevel), VX_EXPORT(GetTraceEnableFlags),
 };
 
 static const vx_export shell32[] = { VX_EXPORT(ShellExecuteA), VX_EXPORT(ShellExecuteW), VX_EXPORT(ShellExecuteExA), VX_EXPORT(ShellExecuteExW) };

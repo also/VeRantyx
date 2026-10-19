@@ -42,6 +42,7 @@
   ],
   "notes": [
     "OpenGL (to macOS's OpenGL); needs network access for map tiles.",
-    "2026-10-15: level controls (20261015T011513Z-earth-start, VXRT_NO_WINE=1); playable needs a playtest (tools/vxrt_playtest.py 348250)."
+    "2026-10-15: level controls (20261015T011513Z-earth-start, VXRT_NO_WINE=1); playable needs a playtest (tools/vxrt_playtest.py 348250).",
+    "2026-10-19: the 2026-10-18 update's openvr_api.dll carries MSVC's Concurrency Runtime, which needs GetCurrentProcessorNumberEx, CreateRemoteThreadEx, the UMS functions (failing, as on Windows 11) and RegisterTraceGuidsW & co.; without them terminate() (20261019T155946Z-earth-start). With them level controls again (20261019T162836Z-earth-start, Apple M1 8-core GPU under heavy load from other programs: its 8.7 fps is not a baseline)."
   ]
 }

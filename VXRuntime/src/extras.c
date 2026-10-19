@@ -257,9 +257,25 @@ static WINAPI LONG HidP_SetUsages(int type, uint16_t page, uint16_t coll, uint16
     (void)type; (void)page; (void)coll; (void)list; (void)n; (void)pre; (void)report; (void)len; return HIDP_STATUS_NOT_IMPLEMENTED;
 }
 
+// User-mode scheduling: gone in Windows 11, whose kernel32 still exports these to fail. MSVC's Concurrency
+// Runtime (in OpenVR's openvr_api.dll since its 2026 update) throws if they are missing, and uses its thread
+// scheduler when they fail.
+#define UMS_UNSUPPORTED(name) static WINAPI BOOL name(void) { vx_set_last_error(50 /* ERROR_NOT_SUPPORTED */); return 0; }
+UMS_UNSUPPORTED(CreateUmsCompletionList) UMS_UNSUPPORTED(DequeueUmsCompletionListItems) UMS_UNSUPPORTED(GetUmsCompletionListEvent)
+UMS_UNSUPPORTED(ExecuteUmsThread) UMS_UNSUPPORTED(UmsThreadYield) UMS_UNSUPPORTED(DeleteUmsCompletionList)
+UMS_UNSUPPORTED(CreateUmsThreadContext) UMS_UNSUPPORTED(DeleteUmsThreadContext) UMS_UNSUPPORTED(QueryUmsThreadInformation)
+UMS_UNSUPPORTED(SetUmsThreadInformation) UMS_UNSUPPORTED(EnterUmsSchedulingMode)
+static WINAPI void *GetCurrentUmsThread(void) { vx_set_last_error(50); return NULL; }
+static WINAPI void *GetNextUmsListItem(void *item) { (void)item; return NULL; }
+
 static const vx_export kernel32_more[] = {
     VX_EXPORT(GetSystemTimes), VX_EXPORT(InitializeProcThreadAttributeList),
     VX_EXPORT(UpdateProcThreadAttribute), VX_EXPORT(DeleteProcThreadAttributeList),
+    VX_EXPORT(CreateUmsCompletionList), VX_EXPORT(DequeueUmsCompletionListItems), VX_EXPORT(GetUmsCompletionListEvent),
+    VX_EXPORT(ExecuteUmsThread), VX_EXPORT(UmsThreadYield), VX_EXPORT(DeleteUmsCompletionList),
+    VX_EXPORT(CreateUmsThreadContext), VX_EXPORT(DeleteUmsThreadContext), VX_EXPORT(QueryUmsThreadInformation),
+    VX_EXPORT(SetUmsThreadInformation), VX_EXPORT(EnterUmsSchedulingMode), VX_EXPORT(GetCurrentUmsThread),
+    VX_EXPORT(GetNextUmsListItem),
 };
 static const vx_export user32_more[] = {
     VX_EXPORT(CopyRect), VX_EXPORT(GetCaretBlinkTime), VX_EXPORT(DragDetect), VX_EXPORT(SendDlgItemMessageW),

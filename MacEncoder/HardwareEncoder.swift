@@ -101,6 +101,8 @@ var peerNeedsKeyFrame = true
 var keyFrameRequested = true
 var peerGeneration: UInt64 = 0
 var lastClientDiagnosticsAt: TimeInterval = -.infinity
+var lastClientNetworkAt: TimeInterval = -.infinity
+var clientNetworkLinesThisSecond = 0
 let videoDatagramsInFlight = DispatchSemaphore(value: 8)
 let outputLock = NSLock()
 
@@ -1253,6 +1255,23 @@ func receiveVideoPeerPacket(_ packet: Data, from connection: NWConnection) {
             print(String(format: "Headset diagnostics uptime=%.3f %@", now, singleLine))
         }
         adaptiveBitrate.noteHeadsetStatistics(message)
+        return
+    }
+    if packet.starts(with: Data("CLIENT_NET ".utf8)) {
+        // The headset's view of the network (interfaces, the Bonjour results,
+        // the path the stream took), sent when it changes: each one is logged,
+        // at most 20 a second, from the active headset only.
+        let now = ProcessInfo.processInfo.systemUptime
+        peerLock.lock()
+        if now - lastClientNetworkAt >= 1 { lastClientNetworkAt = now; clientNetworkLinesThisSecond = 0 }
+        let shouldLog = videoPeer === connection && clientNetworkLinesThisSecond < 20
+        if shouldLog { clientNetworkLinesThisSecond += 1 }
+        peerLock.unlock()
+        if shouldLog {
+            let message = String(decoding: packet.prefix(1200), as: UTF8.self)
+            let singleLine = message.components(separatedBy: .controlCharacters).joined(separator: " ")
+            print(String(format: "Headset network uptime=%.3f %@", now, singleLine))
+        }
         return
     }
     if packet == Data("HELLO_VR".utf8) {

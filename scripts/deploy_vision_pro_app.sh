@@ -7,7 +7,7 @@ PROJECT="$REPO_ROOT/VisionProClient/VisionSpatialTools/VisionSpatialTools.xcodep
 SCHEME="${SCHEME:-VisionSpatialTools}"
 BUNDLE_ID="${BUNDLE_ID:-marimokodai.VisionSpatialTools}"
 # First paired Apple Vision Pro unless DEVICE_ID is given.
-DEVICE_ID="${DEVICE_ID:-$(xcrun devicectl list devices 2>/dev/null | grep -i 'Vision Pro' | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -1)}"
+DEVICE_ID="${DEVICE_ID:-$(xcrun devicectl list devices 2>/dev/null | grep -i 'Vision Pro' | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}|[0-9A-F]{8}-[0-9A-F]{16}' | head -1)}"   # (identifier, or a UDID as newer devicectl lists)
 if [[ -z "$DEVICE_ID" ]]; then
     echo "No paired Apple Vision Pro found. Pair the headset with this Mac (Settings > General > Remote Devices) or set DEVICE_ID." >&2
     exit 1

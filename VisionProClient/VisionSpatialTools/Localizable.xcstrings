@@ -72,6 +72,16 @@
         }
       }
     },
+    "Searching for the Mac encoder over the Developer Strap…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Developer Strap経由でMacのエンコーダーを検索しています…"
+          }
+        }
+      }
+    },
     "Waiting for video packets.": {
       "localizations": {
         "ja": {
@@ -82,12 +92,22 @@
         }
       }
     },
-    "Connected to the Mac. Waiting for video from the encoder.": {
+    "Connected to the Mac over %@. Waiting for video from the encoder.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Macに接続済み。エンコーダーから映像を待っています。"
+            "value": "Macに接続済み（%@経由）。エンコーダーから映像を待っています。"
+          }
+        }
+      }
+    },
+    "Connect only over the Developer Strap's cable (lower latency; reconnects to the Mac)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Developer Strapのケーブルだけで接続する（遅延が少ない。Macに接続し直す）"
           }
         }
       }
@@ -498,6 +518,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mac接続"
+          }
+        }
+      }
+    },
+    "Network": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワーク"
           }
         }
       }

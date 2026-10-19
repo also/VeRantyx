@@ -14,6 +14,8 @@ struct SteamVRStreamerView: View {
     // Read by VRCompositorRenderer (UserDefaults) once a second.
     @AppStorage(VRCompositorRenderer.showFpsOverlayKey) private var showFpsOverlay = true
     @AppStorage("trackLeftHandWithCameras") private var trackLeftHandWithCameras = true
+    // Read by VRUDPReceiver when it starts looking for the Mac.
+    @AppStorage(VRUDPReceiver.wiredOnlyKey) private var wiredOnlyConnection = false
     @State private var isStarting = false
     @State private var isStopping = false
     @State private var showsHowTo = true
@@ -167,6 +169,8 @@ struct SteamVRStreamerView: View {
             Toggle("Hold the merged Joy-Con pair in the left hand (right hand free)", isOn: $mergedJoyConOneHanded)
             Toggle("Show the fps overlay in VR (game / received / latency / audio)", isOn: $showFpsOverlay)
             Toggle("Track the left hand with the cameras as well (fixed gamepad pose when it is out of view)", isOn: $trackLeftHandWithCameras)
+            Toggle("Connect only over the Developer Strap's cable (lower latency; reconnects to the Mac)", isOn: $wiredOnlyConnection)
+                .onChange(of: wiredOnlyConnection) { receiver.reconnect() }
             Picker("One-handed gamepad hold", selection: $gamepadHold) {
                 Text("Upright").tag(0)
                 Text("Turned left").tag(1)
@@ -179,6 +183,7 @@ struct SteamVRStreamerView: View {
     private var details: some View {
         VStack(alignment: .leading, spacing: 12) {
             statusRow(title: "Mac connection", detail: receiver.connectionStatus)
+            statusRow(title: "Network", detail: receiver.networkStatus)
             statusRow(title: "Video decode", detail: decoder.status)
             statusRow(title: "Game fps", detail: receiver.gameFrameStatus)
             statusRow(title: "Receive fps", detail: String(localized: "\(receiver.receivedVideoFPS) fps"))

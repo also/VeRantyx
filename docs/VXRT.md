@@ -92,6 +92,15 @@ until the next comes: when the game runs far below that rate, turning the head w
 preset on a MacBook Air M5 did; with ALVR's defaults (no preset) it did not. Details, settings and what was checked:
 [ALVRBridge/README.md](../ALVRBridge/README.md).
 
+**Vision Pro over the Developer Strap** (VeRantyx app): with the strap's USB-C cable in the Mac, the headset is on the
+Mac's Thunderbolt Bridge (`bridge0`, a 169.254.x.x address), about 0.8 ms per ping round trip where Wi-Fi gave 27 ms
+on average with spikes to 190 ms (MacBook Pro M4 Pro, 2026-10-19). Turn on "Connect only over the Developer Strap's
+cable" in the app's settings (it reconnects at once): it then finds and reaches the Mac only on that link (no Wi-Fi,
+no AWDL). The app's details show what the headset sees under "Network" (its interfaces and addresses, where it found
+the Mac, the stream's path); the same lines go to `logs/hardware-encoder.log` ("Headset network") and each
+`Headset diagnostics` line has the stream's `link=`. Without the cable it keeps searching. Not yet checked
+in a session.
+
 ### Testing with a Quest or Pico (ALVR)
 
 Not tested on either yet – we have neither. If you do, a report helps a lot, whether it works or not.

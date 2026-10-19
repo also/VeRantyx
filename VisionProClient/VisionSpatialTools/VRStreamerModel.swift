@@ -26,6 +26,9 @@ final class VRStreamerModel: ObservableObject {
         VRAudioPlayer.shared.log = { [weak self] message in
             Task { @MainActor in self?.appendDiagnosticsLog(message) }
         }
+        receiver.log = { [weak self] message in
+            Task { @MainActor in self?.appendDiagnosticsLog(message) }
+        }
     }
 
     func prepare() {
